@@ -1,43 +1,51 @@
 import socket
 import os
+import sys
+import argparse
 
 
 class Client(object):
-    def __init__(self):
+    def __init__(self):  # add client types (writers/readers)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = 8888
-        # self.server_add = '10.140.5.104'
-
-    def start(self):
-        client.create_socket()
-        client.connect_to_server()
-        client.send_messages()
-
-    def create_socket(self):
-        try:
-            self.client_socket = socket.socket()
-        except socket.error as e:
-            print(f'ERROR CREATING CLIENT SOCKET!\n{str(e)}')
+        # self.type = type
+        # self.server_add = ''
 
     def connect_to_server(self):
-        self.client_socket.connect((socket.gethostname(), self.port))
-        msg = self.client_socket.recv(1024)
-        print(msg.decode('utf-8'))
+        self.socket.connect((socket.gethostname(), self.port))
+        server_name = self.socket.recv(1024).decode('utf-8')
 
-    def send_messages(self):
+        # self.write() if self.type == 'writer' else self.read()
+        self.send_commands(server_name)
+
+    def send_commands(self, server_name):
         while True:
-            msg = input()
-            self.client_socket.send(msg.encode())
+            command = input(f'{server_name}> ')
 
-            if msg == 'exit':
-                self.client_socket.close()
-                break
-                exit(1)
+            if command == 'exit':
+                self.socket.close()
+                sys.exit()
 
-            reply = self.client_socket.recv(1024)
-            print(f'Server reply: {reply.decode("utf-8")}')
+            self.socket.send(command.encode())
+            reply = self.socket.recv(1024).decode('utf-8')
+            print(reply)
+
+# end of Client class
+
+
+# def get_arguments():
+#     parser = argparse.ArgumentParser(description='Client program.')
+#     parser.add_argument('-ct', '--client_type', type=str,
+#                         help='Client type. (writer or reader)')
+#
+#     args = parser.parse_args()
+#
+#     return args.client_type
 
 
 if __name__ == '__main__':
     os.system('cls' if os.name == 'nt' else 'clear')
+    # client_type = get_arguments()
+    # client = Client(client_type)
     client = Client()
-    client.start()
+    client.connect_to_server()

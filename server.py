@@ -1,49 +1,73 @@
 import socket
 import os
+import sys
+from multiprocessing import Process, Lock
+from time import sleep
 
 
 class Server(object):
+    """ Implements a Server class which is handling a flights list.
+    Clients can execute reads/writes on that list concurrently. """
+
     def __init__(self):
         self.port = 8888
+        self.lock = Lock()
+        self.flights = []
         # self.host = ''
 
     def start(self):
-        self.create_socket()
-        self.bind_socket()
-        self.accept_connections()
+        """ Gets the server running. """
 
-    def create_socket(self):
-        try:
-            self.server_socket = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error as e:
-            print(f'ERROR CREATING SERVER SOCKET!\n{str(e)}')
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_sock.bind((socket.gethostname(), self.port))
+        server_sock.listen()
+        print('Server running...')
 
-    def bind_socket(self):
-        try:
-            self.server_socket.bind((socket.gethostname(), self.port))
-            self.server_socket.listen()
-            print('Server waiting for connections...')
-        except socket.error as e:
-            print(f'ERROR BINDING SOCKET!\n{str(e)}\nTrying again!')
-            self.bind_socket()
+        self.accept_connections(server_sock)
 
-    def accept_connections(self):
-        client_socket, client_address = self.server_socket.accept()
-        print(f'Connection with {client_address} has been established.')
-        client_socket.send(f'Welcome to {socket.gethostname()}'.encode())
+    def accept_connections(self, server_sock):
+        """ Accepts connections from clients and creates a new process for each
+        client. """
 
         while True:
-            msg = client_socket.recv(1024)
+            client_sock, client_address = server_sock.accept()
+            print(f'Connection with {client_address} has been established.')
+            client_sock.send(socket.gethostname().encode())
 
-            if msg.decode('utf-8') == 'exit':
-                client_socket.close()
-                self.server_socket.close()
-                break
-                exit(1)
+            client_process = Process(
+                target=self.handle_connection, args=(client_sock,))
+            client_process.start()
+
+        socket.close()
+
+    def handle_connection(self, client_sock):
+        while True:
+            command = client_sock.recv(1024).decode('utf-8')
+
+            if 'exit' in command:
+                client_sock.close()
+            elif 'read' in command:
+                self.read()
+                client_sock.send('Read'.encode())
+            elif 'write' in command:
+                self.write()
+                client_sock.send('Write'.encode())
             else:
-                print(msg.decode('utf-8'))
-                client_socket.send(msg)
+                client_sock.send('Wrong command!'.encode())
+
+        client_sock.close()
+
+    def write(self):
+        print('write')
+
+    def read(self):
+        print('read')
+
+    def get_flight(self):
+        pass
+
+# end of Server class
 
 
 if __name__ == '__main__':
