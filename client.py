@@ -12,8 +12,13 @@ class Client(object):
         # self.server_add = ''
 
     def connect_to_server(self):
+        """ Connects to server and prints a help prompt to the console. """
+
         self.socket.connect((socket.gethostname(), self.port))
         server_name = self.socket.recv(1024).decode('utf-8')
+        help = self.socket.recv(1024).decode('utf-8')
+
+        print(f'{server_name}> {help}')
 
         # self.write() if self.type == 'writer' else self.read()
         self.send_commands(server_name)
