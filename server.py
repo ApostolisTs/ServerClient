@@ -1,20 +1,21 @@
-import socket
+from flight import Flight
 import os
-import sys
+import pickle
 import re
+import socket
+import sys
 from threading import Thread, Lock
 from time import sleep
-from flight import Flight
 
 
 class Server(object):
-    """ Implements a Server class which is handling a flights list.
+    """ Implements a Server class which is handling a timetable (list of flights).
     Clients can execute reads/writes on that list concurrently. """
 
     def __init__(self):
         self.port = 8888
         self.lock = Lock()
-        self.flights = []
+        self.timetable = []
         # self.host = ''
 
     def start(self):
@@ -36,7 +37,6 @@ class Server(object):
             client_sock, client_address = server_sock.accept()
             print(f'Connection with {client_address} has been established.')
             client_sock.send(socket.gethostname().encode())
-            # client_sock.send(self.help().encode())
 
             client_process = Thread(
                 target=self.handle_connection, args=(client_sock, client_address))
@@ -44,89 +44,99 @@ class Server(object):
 
         socket.close()
 
-    # def disconnect(function):
-    #     """Decorator function to handle the disconnection of a client."""
-    #
-    #     def inner(*args):
-    #         try:
-    #             function(*args)
-    #         except BrokenPipeError:
-    #             _, _, client_address = args
-    #             print(f'Client: {client_address} disconnected.')
-    #     return inner
-    #
-
     def handle_connection(self, client_sock, client_address):
-        """ Handles a client connection based on the command the client typed.
-
-        params: client_sock, client_address
-        """
+        """ Handles a client connection based on the command the client typed."""
 
         while True:
             command = client_sock.recv(1024).decode('utf-8')
 
             if command[0] == 'r':
                 _, flight_code = command.split()
-                client_sock.send(self.read_from_flights(flight_code).encode())
+                response = self.read_flight(flight_code)
+                client_sock.send(response.encode())
+
             elif command[0] == 'w':
                 _, flight_code, status, time = command.split()
-                client_sock.send(self.write_to_flights(
-                    flight_code, status, time).encode())
+                response = self.write_flight(flight_code, status, time)
+                client_sock.send(response.encode())
+
+            elif command[0] == 'm':
+                _, flight_code, status, time = command.split()
+                response = self.modify_flight(flight_code, status, time)
+                client_sock.send(response.encode())
+
+            elif command[0] == 't':
+                client_sock.send(pickle.dumps(self.timetable))
+
             elif command == 'exit':
                 print(f'Client: {client_address} disconnected.')
                 break
 
         client_sock.close()
 
-    def find_flight(self, flight_code):
+    def get_flight_index(self, flight_code):
         """ Finds the flight with the same flight_code passed in the parameters.
         If there is no flight with such flight_code return None.
 
-        params: flight_code
         return: flight | None
         """
 
-        for flight in self.flights:
+        for i, flight in enumerate(self.timetable):
             if flight.code == flight_code:
-                return flight
+                return i
 
         return None
 
-    def write_to_flights(self, flight_code, status, time):
-        """ Creates an Flight object and appends it to the flights list.
+    def write_flight(self, flight_code, status, time):
+        """ Creates an Flight object and appends it to the timetable.
 
-        params: flight_code, status, time
         return: 'WERR' | 'WOK'
         """
-
         with self.lock:
-            flight = self.find_flight(flight_code)
+            index = self.get_flight_index(flight_code)
 
-            if flight is not None:
+            if index is not None:
                 return 'WERR'
             else:
-                print('Writing to flights list...')
-                sleep(5)
+                print('Writing to timetable...')
+                sleep(3)
                 new_flight = Flight(flight_code, status, time)
-                self.flights.append(new_flight)
+                self.timetable.append(new_flight)
                 return 'WOK'
 
-    def read_from_flights(self, flight_code):
-        """ Search for the flight with the given flight_code in the flights list.
+    def read_flight(self, flight_code):
+        """ Search for the flight with the given flight_code in the timetable.
 
-        params: flight_code
-        return: 'RERR-EL' | 'RERR-NF' | flight
+        return: 'RERR-EL' | 'RERR-NF' | 'ROK: repr(flight)'
         """
-
         with self.lock:
-            if len(self.flights) == 0:
+            if len(self.timetable) == 0:
                 return 'RERR-EL'
             else:
-                print('Reading from flights list...')
-                sleep(2)
-                flight = self.find_flight(flight_code)
+                print('Reading from timetable...')
+                sleep(1)
+                index = self.get_flight_index(flight_code)
 
-                return f'ROK: {repr(flight)}' if flight is not None else 'RERR-NF'
+                return f'ROK: {repr(self.timetable[index])}' if index is not None else 'RERR-NF'
+
+    def modify_flight(self, flight_code, status, time):
+        with self.lock:
+            index = self.get_flight_index(flight_code)
+
+            if index is None:
+                return 'MERR'
+            else:
+                print(f'Modifing flight:{flight_code} ...')
+                sleep(2)
+                flight = self.timetable.pop(index)
+                if flight.status is not status:
+                    flight.status = status
+
+                if flight.time is not time:
+                    flight.time = time
+
+                self.timetable.append(flight)
+                return 'MOK'
 
 # end of Server class
 

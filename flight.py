@@ -1,5 +1,3 @@
-from multiprocessing import Lock
-
 
 class Flight(object):
     """ Flight object. Will be used to store flights and keep them organised. """
