@@ -11,3 +11,6 @@ class Flight(object):
 
     def __repr__(self):
         return f'Flight code: {self.code}, Status: {self.status}, Time: {self.time}'
+
+    # def __eq__(self, other):
+    #     return self.code == other.code
