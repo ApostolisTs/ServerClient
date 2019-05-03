@@ -7,9 +7,10 @@ import sys
 
 
 class Client(object):
-    read_cmd_pattern = r'^read \d+$'
+    # pattern for read and delete commands
+    rd_cmd_pattern = r'^(read|delete) \d+$'
+    # pattern for write and modify commands
     wm_cmd_pattern = r'^(write|modify) \d+ (arrival|departure) \d{2}:\d{2}$'
-    # modify_command_pattern = r'^modify \d+ (arrival|departure) \d{2}:\d{2}$'
 
     def __init__(self):  # add client types (writers/readers)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,16 +33,15 @@ class Client(object):
         while True:
             command = input(f'{server_name}> ')
 
-            # or re.match(self.write_command_pattern, command):
-            if re.match(self.read_cmd_pattern, command):
+            if re.match(self.rd_cmd_pattern, command) or re.match(self.wm_cmd_pattern, command):
                 self.socket.send(command.encode())
                 response = self.socket.recv(1024).decode('utf-8')
                 self.process_response(command, response)
 
-            elif re.match(self.wm_cmd_pattern, command):
-                self.socket.send(command.encode())
-                response = self.socket.recv(1024).decode('utf-8')
-                self.process_response(command, response)
+            # elif re.match(self.wm_cmd_pattern, command):
+            #     self.socket.send(command.encode())
+            #     response = self.socket.recv(1024).decode('utf-8')
+            #     self.process_response(command, response)
 
             elif command == 'timetable':
                 self.socket.send(command.encode())
@@ -62,27 +62,34 @@ class Client(object):
     def process_response(self, command, response):
         """Processes the response sent from the server."""
 
-        if command[0] == 'r':
+        args = command.split()
+        if args[0] == 'read':
             if response == 'RERR-EL':
                 print('RERR: Timetable is empty.')
             elif response == 'RERR-NF':
-                print(f'RERR: The flight you requested was not found.')
+                print(f'RERR: Flight {args[1]} was not found.')
             else:
                 print(response)
 
-        elif command[0] == 'w':
+        elif args[0] == 'write':
             if response == 'WOK':
-                print('WOK: Flight successfully written.')
+                print(f'WOK: Flight {args[1]} successfully written.')
             else:
-                print('WERR: Invalid flight_code.')
+                print(f'WERR: Invalid flight_code: {args[1]}.')
 
-        elif command[0] == 'm':
+        elif args[0] == 'modify':
             if response == 'MOK':
-                print('MOK: Flight successfully modified.')
+                print(f'MOK: Flight {args[1]} successfully modified.')
             else:
-                print('MERR: Invalid flight.')
+                print(f'MERR: Invalid flight {args[1]}.')
 
-        elif command[0] == 't':
+        elif args[0] == 'delete':
+            if response == 'DOK':
+                print(f'DOK: Flight {args[1]} deleted.')
+            else:
+                print(f'DERR: Flight {args[1]} was not found.')
+
+        elif args[0] == 'timetable':
             timetable = pickle.loads(response)
             for flight in timetable:
                 print(flight)
