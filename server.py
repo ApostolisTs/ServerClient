@@ -27,7 +27,6 @@ class Server(object):
         self.port = 8888
         self.lock = Lock()
         self.timetable = TIMETABLE
-        # self.host = ''
 
     def start(self):
         """ Gets the server running. """
@@ -38,9 +37,9 @@ class Server(object):
         server_sock.listen()
         print('Server running...')
 
-        self.accept_connections(server_sock)
+        self.__accept_connections(server_sock)
 
-    def accept_connections(self, server_sock):
+    def __accept_connections(self, server_sock):
         """ Accepts connections from clients and creates a new process for each
         client. """
 
@@ -50,12 +49,12 @@ class Server(object):
             client_sock.send(socket.gethostname().encode())
 
             client_process = Thread(
-                target=self.handle_connection, args=(client_sock, client_address))
+                target=self.__handle_connection, args=(client_sock, client_address))
             client_process.start()
 
         socket.close()
 
-    def handle_connection(self, client_sock, client_address):
+    def __handle_connection(self, client_sock, client_address):
         """ Handles a client connection based on the command the client typed."""
 
         while True:
@@ -63,22 +62,22 @@ class Server(object):
 
             if command[0] == 'r':
                 _, flight_code = command.split()
-                response = self.read_flight(int(flight_code))
+                response = self.__read_flight(int(flight_code))
                 client_sock.send(response.encode())
 
             elif command[0] == 'w':
                 _, flight_code, status, time = command.split()
-                response = self.write_flight(int(flight_code), status, time)
+                response = self.__write_flight(int(flight_code), status, time)
                 client_sock.send(response.encode())
 
             elif command[0] == 'm':
                 _, flight_code, status, time = command.split()
-                response = self.modify_flight(int(flight_code), status, time)
+                response = self.__modify_flight(int(flight_code), status, time)
                 client_sock.send(response.encode())
 
             elif command[0] == 'd':
                 _, flight_code = command.split()
-                response = self.delete_flight(int(flight_code))
+                response = self.__delete_flight(int(flight_code))
                 client_sock.send(response.encode())
 
             elif command[0] == 't':
@@ -90,37 +89,35 @@ class Server(object):
 
         client_sock.close()
 
-    def get_flight_index(self, flight_code):
+    def __get_flight_index(self, flight_code):
         """ Finds the flight with the same flight_code passed in the parameters.
         If there is no flight with such flight_code return None.
 
         return: flight | None
         """
-
         for i, flight in enumerate(self.timetable):
             if flight.code == flight_code:
                 return i
-
         return None
 
-    def write_flight(self, flight_code, status, time):
+    def __write_flight(self, flight_code, status, time,):
         """ Creates an Flight object and appends it to the timetable.
 
         return: 'WERR' | 'WOK'
         """
         with self.lock:
-            index = self.get_flight_index(flight_code)
+            index = self.__get_flight_index(flight_code)
 
             if index is not None:
                 return 'WERR'
             else:
                 print('Writing to timetable...')
-                sleep(3)
+                sleep(7)
                 new_flight = Flight(flight_code, status, time)
                 self.timetable.append(new_flight)
                 return 'WOK'
 
-    def read_flight(self, flight_code):
+    def __read_flight(self, flight_code,):
         """ Search for the flight with the given flight_code in the timetable.
 
         return: 'RERR-EL' | 'RERR-NF' | 'ROK: repr(flight)'
@@ -130,18 +127,18 @@ class Server(object):
                 return 'RERR-EL'
             else:
                 print('Reading from timetable...')
-                sleep(1)
-                index = self.get_flight_index(flight_code)
+                sleep(5)
+                index = self.__get_flight_index(flight_code)
 
                 return f'ROK: {repr(self.timetable[index])}' if index is not None else 'RERR-NF'
 
-    def modify_flight(self, flight_code, status, time):
+    def __modify_flight(self, flight_code, status, time):
         """Modify a flight from the timetable based on the given flight_code.
 
         return: 'MERR' | 'MOK'
         """
         with self.lock:
-            index = self.get_flight_index(flight_code)
+            index = self.__get_flight_index(flight_code)
 
             if index is None:
                 return 'MERR'
@@ -158,13 +155,13 @@ class Server(object):
                 self.timetable.append(flight)
                 return 'MOK'
 
-    def delete_flight(self, flight_code):
+    def __delete_flight(self, flight_code):
         """Delete a flight from the timetable based on the given flight_code.
 
         return: 'DERR' | 'DOK'
         """
         with self.lock:
-            index = self.get_flight_index(flight_code)
+            index = self.__get_flight_index(flight_code)
 
             if index is None:
                 return 'DERR'
