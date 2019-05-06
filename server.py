@@ -18,6 +18,11 @@ TIMETABLE = [
     Flight(7, 'arrival', '23:40'),
 ]
 
+WRITE_DELAY = 6
+READ_DELAY = 3
+DELETE_DELAY = 4
+MODIFY_DELAY = 5
+
 
 class Server(object):
     """ Implements a Server class which is handling a timetable (list of flights).
@@ -112,7 +117,7 @@ class Server(object):
                 return 'WERR'
             else:
                 print('Writing to timetable...')
-                sleep(7)
+                sleep(WRITE_DELAY)
                 new_flight = Flight(flight_code, status, time)
                 self.timetable.append(new_flight)
                 return 'WOK'
@@ -123,14 +128,17 @@ class Server(object):
         return: 'RERR-EL' | 'RERR-NF' | 'ROK: repr(flight)'
         """
         with self.lock:
+            index = self.__get_flight_index(flight_code)
+
             if len(self.timetable) == 0:
                 return 'RERR-EL'
+            elif index is None:
+                return 'RERR-NF'
             else:
                 print('Reading from timetable...')
-                sleep(5)
-                index = self.__get_flight_index(flight_code)
+                sleep(READ_DELAY)
 
-                return f'ROK: {repr(self.timetable[index])}' if index is not None else 'RERR-NF'
+                return f'ROK: {repr(self.timetable[index])}'
 
     def __modify_flight(self, flight_code, status, time):
         """Modify a flight from the timetable based on the given flight_code.
@@ -144,7 +152,7 @@ class Server(object):
                 return 'MERR'
             else:
                 print(f'Modifing flight:{flight_code} ...')
-                sleep(2)
+                sleep(MODIFY_DELAY)
                 flight = self.timetable.pop(index)
                 if flight.status is not status:
                     flight.status = status
@@ -167,7 +175,7 @@ class Server(object):
                 return 'DERR'
             else:
                 print(f'Deleting flight: {flight_code}')
-                sleep(1)
+                sleep(DELETE_DELAY)
                 flight = self.timetable.pop(index)
                 return 'DOK'
 

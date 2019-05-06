@@ -8,6 +8,8 @@ import sys
 import time
 from threading import Thread
 
+NUM_0F_REQS = 10
+
 
 class Client(object):
     """Implements a Clients that reads and writes in a server's timetable
@@ -40,7 +42,7 @@ class Client(object):
         """Execute automatic write requests to the server."""
 
         reqs = 0
-        while reqs < 5:
+        while reqs < NUM_0F_REQS:
             random_choice = random.randint(0, 2)
 
             if random_choice == 0:
@@ -164,10 +166,10 @@ class Client(object):
 def get_arguments():
     parser = argparse.ArgumentParser(description='Client program.')
     parser.add_argument('-u', '--user', type=bool, default=False,
-                        help='If the argument is true runs a terminal for the user '
-                        + 'to interact with the server and send commands. If its false '
-                        + 'it runs a simulations of reads and writes in the server automatically.'
-                        + 'Default=False')
+                        help='If the argument is true runs a terminal for the user ' +
+                        'to interact with the server and send commands. If its false ' +
+                        'it runs a simulations of reads and writes in the server automatically.' +
+                        'Default=False')
 
     args = parser.parse_args()
 
