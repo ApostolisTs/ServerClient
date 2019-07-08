@@ -57,7 +57,7 @@ class Server(object):
                 target=self.__handle_connection, args=(client_sock, client_address))
             client_process.start()
 
-        socket.close()
+        server_sock.close()
 
     def __handle_connection(self, client_sock, client_address):
         """ Handles a client connection based on the command the client typed."""
@@ -66,26 +66,31 @@ class Server(object):
             command = client_sock.recv(1024).decode('utf-8')
 
             if command[0] == 'r':
+                # Read a flight.
                 _, flight_code = command.split()
                 response = self.__read_flight(int(flight_code))
                 client_sock.send(response.encode())
 
             elif command[0] == 'w':
+                # Write a flight.
                 _, flight_code, status, time = command.split()
                 response = self.__write_flight(int(flight_code), status, time)
                 client_sock.send(response.encode())
 
             elif command[0] == 'm':
+                # Modify a flight.
                 _, flight_code, status, time = command.split()
                 response = self.__modify_flight(int(flight_code), status, time)
                 client_sock.send(response.encode())
 
             elif command[0] == 'd':
+                # Delete a flight.
                 _, flight_code = command.split()
                 response = self.__delete_flight(int(flight_code))
                 client_sock.send(response.encode())
 
             elif command[0] == 't':
+                # Read timetable.
                 client_sock.send(pickle.dumps(self.timetable))
 
             elif command == 'exit':
